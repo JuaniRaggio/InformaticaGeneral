@@ -120,6 +120,10 @@ class FraseInterminableVisual:
                                             command=self.comparar_siguiente_caracter, state="disabled")
         self.btn_siguiente_char.pack(side=tk.LEFT, padx=5)
         
+        self.btn_pedir_siguiente = ttk.Button(button_frame, text="🎯 Pedir Siguiente Frase", 
+                                             command=self.pedir_siguiente_frase, state="disabled")
+        self.btn_pedir_siguiente.pack(side=tk.LEFT, padx=5)
+        
         ttk.Button(button_frame, text="Reiniciar", 
                   command=self.reiniciar_validacion).pack(side=tk.LEFT, padx=5)
         
@@ -709,6 +713,7 @@ class FraseInterminableVisual:
         self.btn_siguiente_char.config(state="disabled")
         self.btn_siguiente_cambio.config(state="disabled")
         self.btn_iniciar_comparacion.config(state="disabled")
+        self.btn_pedir_siguiente.config(state="disabled")
         self.canvas_comparacion.delete("all")
         self.text_validacion.delete(1.0, tk.END)
         self.entry_palabra.delete(0, tk.END)
@@ -726,8 +731,52 @@ class FraseInterminableVisual:
         
         self.text_validacion.insert(tk.END, f"\n🎯 Nueva frase establecida: '{frase_normalizada}'\n")
         self.text_validacion.insert(tk.END, f"📊 Frases exitosas dichas: {self.frases_dichas}\n")
-        self.text_validacion.insert(tk.END, "Proceda a la Etapa 2 para calcular el siguiente turno.\n")
+        self.text_validacion.insert(tk.END, "\n✅ ¡Frase aceptada correctamente!\n")
+        self.text_validacion.insert(tk.END, "Presione '🎯 Pedir Siguiente Frase' para continuar con el siguiente jugador.\n")
         self.actualizar_info()
+        
+        # Habilitar botón para pedir siguiente frase
+        self.btn_pedir_siguiente.config(state="normal")
+    
+    def pedir_siguiente_frase(self):
+        """Prepara el juego para el siguiente jugador"""
+        self.text_validacion.insert(tk.END, "\n" + "="*60 + "\n")
+        self.text_validacion.insert(tk.END, "           🔄 PREPARANDO SIGUIENTE TURNO\n")
+        self.text_validacion.insert(tk.END, "="*60 + "\n\n")
+        
+        # Calcular quien sigue
+        siguiente_jugador_num = (self.frases_dichas % self.num_jugadores) + 1
+        siguiente_jugador = f"Jugador {siguiente_jugador_num}"
+        
+        self.text_validacion.insert(tk.END, f"🎯 Cálculo del siguiente turno:\n")
+        self.text_validacion.insert(tk.END, f"   Frases exitosas: {self.frases_dichas}\n")
+        self.text_validacion.insert(tk.END, f"   Fórmula: ({self.frases_dichas} % {self.num_jugadores}) + 1 = {siguiente_jugador_num}\n")
+        self.text_validacion.insert(tk.END, f"   👉 Le toca a: {siguiente_jugador}\n\n")
+        
+        self.text_validacion.insert(tk.END, f"📋 Frase que debe continuar: '{self.frase_anterior}'\n")
+        self.text_validacion.insert(tk.END, f"📝 {siguiente_jugador}, ingrese su frase (debe empezar con la frase anterior + agregar palabras)\n\n")
+        
+        # Mostrar información adicional para ayudar al jugador
+        self.text_validacion.insert(tk.END, "💡 Recordatorio:\n")
+        self.text_validacion.insert(tk.END, f"   1. Su frase debe comenzar exactamente con: '{self.frase_anterior}'\n")
+        self.text_validacion.insert(tk.END, f"   2. Luego agregar un espacio y al menos una palabra más\n")
+        self.text_validacion.insert(tk.END, f"   3. Ejemplo: '{self.frase_anterior} nueva palabra aquí'\n\n")
+        
+        # Actualizar información del jugador actual
+        self.actualizar_info()
+        
+        # Limpiar y preparar para nueva entrada
+        self.entry_palabra.delete(0, tk.END)
+        self.canvas_comparacion.delete("all")
+        
+        # Desactivar botón hasta la próxima frase exitosa
+        self.btn_pedir_siguiente.config(state="disabled")
+        
+        # Mostrar mensaje de confirmación
+        messagebox.showinfo("Siguiente Turno", 
+                           f"¡Turno de {siguiente_jugador}!\n\n"
+                           f"Debe continuar: '{self.frase_anterior}'\n"
+                           f"Frases exitosas hasta ahora: {self.frases_dichas}")
     
     def calcular_turno(self):
         if self.num_jugadores == 0:
@@ -736,7 +785,7 @@ class FraseInterminableVisual:
         
         self.canvas_turno.delete("all")
         self.text_turno.delete(1.0, tk.END)
-        self.text_turno.insert(tk.END, "=== ETAPA 2: CÁLCULO DEL SIGUIENTE TURNO ===\n\n")
+        self.text_turno.insert(tk.END, "=== ETAPA 2: CÁLCULO DETALLADO DEL TURNO ===\n\n")
         
         # Mostrar información actual y cálculo del jugador actual
         jugador_actual_num = (self.frases_dichas % self.num_jugadores) + 1
