@@ -23,16 +23,21 @@ class FraseInterminableVisual:
         self.nueva_frase = ""
         self.comparaciones_realizadas = []  # Para guardar el historial sin spoilers
         
-        # Variables para normalización
+        # Variables para normalización paso a paso
         self.normalizacion_activa = False
         self.frase_original = ""
+        self.indice_normalizacion = 0
+        self.texto_siendo_normalizado = ""
+        self.cambios_encontrados = []  # Lista de cambios: {'tipo': 'espacio'/'mayuscula', 'pos': int, 'char': str}
+        self.tipo_cambio_actual = ""
         
         # Crear la interfaz
         self.crear_interfaz()
         
     def normalizar_espacios(self, texto):
-        """Normaliza espacios múltiples a uno solo"""
-        return re.sub(r'\s+', ' ', texto.strip())
+        """Normaliza espacios múltiples a uno solo y convierte a minúsculas"""
+        texto_sin_espacios = re.sub(r'\s+', ' ', texto.strip())
+        return texto_sin_espacios.lower()
         
     def crear_interfaz(self):
         # Frame principal
@@ -100,8 +105,12 @@ class FraseInterminableVisual:
         button_frame = ttk.Frame(self.frame_etapa1)
         button_frame.grid(row=3, column=0, columnspan=3, pady=5)
         
-        ttk.Button(button_frame, text="1. Normalizar Texto", 
-                  command=self.mostrar_normalizacion).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="1. Iniciar Normalización", 
+                  command=self.iniciar_normalizacion).pack(side=tk.LEFT, padx=5)
+        
+        self.btn_siguiente_cambio = ttk.Button(button_frame, text="Siguiente Cambio", 
+                                              command=self.normalizar_siguiente_cambio, state="disabled")
+        self.btn_siguiente_cambio.pack(side=tk.LEFT, padx=5)
         
         self.btn_iniciar_comparacion = ttk.Button(button_frame, text="2. Iniciar Comparación", 
                                                  command=self.iniciar_comparacion_visual, state="disabled")
@@ -177,93 +186,284 @@ class FraseInterminableVisual:
             frase_mostrar = self.frase_anterior if self.frase_anterior else "(vacía)"
             self.label_frase.config(text=f"Frase anterior: {frase_mostrar}")
     
-    def mostrar_normalizacion(self):
-        """Muestra el proceso de normalización en la pantalla blanca"""
+    def iniciar_normalizacion(self):
+        """Inicia el proceso de normalización paso a paso"""
         frase_nueva_raw = self.entry_palabra.get().strip()
         
         self.canvas_comparacion.delete("all")
         self.text_validacion.delete(1.0, tk.END)
-        self.text_validacion.insert(tk.END, "=== PASO 1: NORMALIZACIÓN DE TEXTO ===\n\n")
+        self.text_validacion.insert(tk.END, "=== PASO 1: NORMALIZACIÓN PASO A PASO ===\n\n")
         
         if not frase_nueva_raw:
             self.text_validacion.insert(tk.END, "❌ ERROR: Input vacío\n")
             self.text_validacion.insert(tk.END, "Debe ingresar al menos una palabra.\n")
             return
         
-        # Normalizar espacios
-        frase_nueva = self.normalizar_espacios(frase_nueva_raw)
-        
         self.text_validacion.insert(tk.END, f"Texto original: '{frase_nueva_raw}'\n")
         self.text_validacion.insert(tk.END, f"Longitud original: {len(frase_nueva_raw)} caracteres\n\n")
         
-        # Mostrar normalización visual en canvas
-        self.mostrar_normalizacion_visual(frase_nueva_raw, frase_nueva)
-        
-        if frase_nueva_raw != frase_nueva:
-            self.text_validacion.insert(tk.END, f"🔄 Se detectaron espacios múltiples para normalizar\n")
-            self.text_validacion.insert(tk.END, f"Texto normalizado: '{frase_nueva}'\n")
-            self.text_validacion.insert(tk.END, f"Longitud normalizada: {len(frase_nueva)} caracteres\n\n")
-        else:
-            self.text_validacion.insert(tk.END, f"✅ No se requiere normalización\n")
-            self.text_validacion.insert(tk.END, f"Texto final: '{frase_nueva}'\n\n")
-        
-        # Actualizar el campo de entrada con la versión normalizada
-        self.entry_palabra.delete(0, tk.END)
-        self.entry_palabra.insert(0, frase_nueva)
-        
-        # Guardar para siguiente paso
+        # Preparar variables para normalización paso a paso
         self.frase_original = frase_nueva_raw
-        self.nueva_frase = frase_nueva
+        self.texto_siendo_normalizado = frase_nueva_raw
+        self.indice_normalizacion = 0
+        self.cambios_encontrados = []
+        
+        # Encontrar todos los cambios necesarios
+        self.encontrar_cambios_normalizacion(frase_nueva_raw)
+        
+        if not self.cambios_encontrados:
+            self.text_validacion.insert(tk.END, "✅ No se requiere normalización\n")
+            self.text_validacion.insert(tk.END, "El texto ya está en formato correcto\n")
+            self.nueva_frase = frase_nueva_raw.lower()  # Solo convertir a minúsculas
+            self.entry_palabra.delete(0, tk.END)
+            self.entry_palabra.insert(0, self.nueva_frase)
+            self.btn_iniciar_comparacion.config(state="normal")
+            self.dibujar_estado_normalizacion_completa()
+        else:
+            total_cambios = len(self.cambios_encontrados)
+            espacios = sum(1 for c in self.cambios_encontrados if c['tipo'] == 'espacio')
+            mayusculas = sum(1 for c in self.cambios_encontrados if c['tipo'] == 'mayuscula')
+            
+            self.text_validacion.insert(tk.END, f"🔍 Se encontraron {total_cambios} cambios necesarios:\n")
+            self.text_validacion.insert(tk.END, f"   - {espacios} espacios múltiples a eliminar\n")
+            self.text_validacion.insert(tk.END, f"   - {mayusculas} mayúsculas a convertir\n")
+            self.text_validacion.insert(tk.END, "Presione 'Siguiente Cambio' para normalizar paso a paso\n\n")
+            self.normalizacion_activa = True
+            self.btn_siguiente_cambio.config(state="normal")
+            self.dibujar_estado_normalizacion_inicial()
+    
+    def encontrar_cambios_normalizacion(self, texto):
+        """Encuentra todos los cambios necesarios: espacios múltiples y mayúsculas"""
+        self.cambios_encontrados = []
+        
+        # Encontrar espacios múltiples
+        i = 0
+        while i < len(texto) - 1:
+            if texto[i] == ' ' and texto[i + 1] == ' ':
+                # Encontrar todos los espacios consecutivos
+                j = i + 1
+                while j < len(texto) and texto[j] == ' ':
+                    self.cambios_encontrados.append({
+                        'tipo': 'espacio',
+                        'pos': j,
+                        'char': ' ',
+                        'accion': 'eliminar'
+                    })
+                    j += 1
+                i = j
+            else:
+                i += 1
+        
+        # Encontrar mayúsculas
+        for i, char in enumerate(texto):
+            if char.isupper():
+                self.cambios_encontrados.append({
+                    'tipo': 'mayuscula',
+                    'pos': i,
+                    'char': char,
+                    'nuevo_char': char.lower(),
+                    'accion': 'convertir'
+                })
+        
+        # Ordenar cambios por posición (espacios primero, luego mayúsculas)
+        self.cambios_encontrados.sort(key=lambda x: (x['pos'], x['tipo'] == 'mayuscula'))
+    
+    def normalizar_siguiente_cambio(self):
+        """Realiza el siguiente cambio de normalización"""
+        if not self.normalizacion_activa or self.indice_normalizacion >= len(self.cambios_encontrados):
+            self.finalizar_normalizacion()
+            return
+        
+        cambio = self.cambios_encontrados[self.indice_normalizacion]
+        self.tipo_cambio_actual = cambio['tipo']
+        
+        # Ajustar posición según eliminaciones previas
+        espacios_eliminados = sum(1 for i in range(self.indice_normalizacion) 
+                                 if self.cambios_encontrados[i]['tipo'] == 'espacio')
+        pos_actual = cambio['pos'] - espacios_eliminados
+        
+        self.text_validacion.insert(tk.END, f"Paso {self.indice_normalizacion + 1}: ")
+        
+        if cambio['tipo'] == 'espacio':
+            self.text_validacion.insert(tk.END, f"Eliminando espacio en posición {pos_actual}\n")
+            self.text_validacion.insert(tk.END, f"Antes: '{self.texto_siendo_normalizado}'\n")
+            
+            # Eliminar el espacio
+            self.texto_siendo_normalizado = (self.texto_siendo_normalizado[:pos_actual] + 
+                                           self.texto_siendo_normalizado[pos_actual + 1:])
+            
+        elif cambio['tipo'] == 'mayuscula':
+            char_original = cambio['char']
+            char_nuevo = cambio['nuevo_char']
+            self.text_validacion.insert(tk.END, f"Convirtiendo '{char_original}' → '{char_nuevo}' en posición {pos_actual}\n")
+            self.text_validacion.insert(tk.END, f"Antes: '{self.texto_siendo_normalizado}'\n")
+            
+            # Convertir la mayúscula
+            texto_lista = list(self.texto_siendo_normalizado)
+            if pos_actual < len(texto_lista):
+                texto_lista[pos_actual] = char_nuevo
+                self.texto_siendo_normalizado = ''.join(texto_lista)
+        
+        self.text_validacion.insert(tk.END, f"Después: '{self.texto_siendo_normalizado}'\n\n")
+        
+        self.indice_normalizacion += 1
+        
+        # Actualizar visualización
+        self.dibujar_estado_normalizacion_paso(pos_actual, cambio)
+        
+        # Verificar si terminamos
+        if self.indice_normalizacion >= len(self.cambios_encontrados):
+            self.finalizar_normalizacion()
+    
+    def finalizar_normalizacion(self):
+        """Finaliza el proceso de normalización"""
+        self.normalizacion_activa = False
+        self.btn_siguiente_cambio.config(state="disabled")
+        
+        # Contar tipos de cambios realizados
+        espacios_eliminados = sum(1 for c in self.cambios_encontrados if c['tipo'] == 'espacio')
+        mayusculas_convertidas = sum(1 for c in self.cambios_encontrados if c['tipo'] == 'mayuscula')
         
         self.text_validacion.insert(tk.END, "✅ Normalización completada\n")
+        self.text_validacion.insert(tk.END, f"Texto final: '{self.texto_siendo_normalizado}'\n")
+        self.text_validacion.insert(tk.END, f"Cambios realizados:\n")
+        self.text_validacion.insert(tk.END, f"   - {espacios_eliminados} espacios eliminados\n")
+        self.text_validacion.insert(tk.END, f"   - {mayusculas_convertidas} mayúsculas convertidas\n")
         self.text_validacion.insert(tk.END, "Presione '2. Iniciar Comparación' para continuar\n")
+        
+        # Actualizar el campo de entrada y variables
+        self.entry_palabra.delete(0, tk.END)
+        self.entry_palabra.insert(0, self.texto_siendo_normalizado)
+        self.nueva_frase = self.texto_siendo_normalizado
         
         # Habilitar siguiente paso
         self.btn_iniciar_comparacion.config(state="normal")
+        
+        # Mostrar resultado final
+        self.dibujar_estado_normalizacion_completa()
     
-    def mostrar_normalizacion_visual(self, original, normalizada):
-        """Muestra visualmente el proceso de normalización en el canvas"""
+    def dibujar_estado_normalizacion_inicial(self):
+        """Dibuja el estado inicial de la normalización"""
+        self.canvas_comparacion.delete("all")
+        
+        # Título
         self.canvas_comparacion.create_text(10, 10, anchor="w", 
-                                           text="Proceso de Normalización:", 
+                                           text="Normalización paso a paso: espacios + mayúsculas", 
                                            font=("Arial", 12, "bold"))
         
         # Mostrar texto original
         self.canvas_comparacion.create_text(10, 40, anchor="w", 
-                                           text="Original:", font=("Arial", 10, "bold"))
+                                           text="Texto a normalizar:", font=("Arial", 10, "bold"))
         
-        x_offset = 10
-        y_original = 60
-        char_width = 12
-        
-        # Dibujar caracteres originales
-        for i, char in enumerate(original):
-            color = "red" if char == ' ' and i > 0 and original[i-1] == ' ' else "black"
-            display_char = '␣' if char == ' ' else char  # Mostrar espacios como ␣
-            self.canvas_comparacion.create_text(x_offset + i * char_width, y_original, anchor="w", 
-                                               text=display_char, font=("Courier", 11), fill=color)
-        
-        # Flecha de transformación
-        self.canvas_comparacion.create_text(10, 90, anchor="w", 
-                                           text="↓ Normalización (espacios múltiples → espacio único)", 
-                                           font=("Arial", 10), fill="blue")
-        
-        # Mostrar texto normalizado
-        self.canvas_comparacion.create_text(10, 120, anchor="w", 
-                                           text="Normalizado:", font=("Arial", 10, "bold"))
-        
-        y_normalizada = 140
-        
-        # Dibujar caracteres normalizados
-        for i, char in enumerate(normalizada):
-            display_char = '␣' if char == ' ' else char  # Mostrar espacios como ␣
-            color = "green" if original != normalizada else "black"
-            self.canvas_comparacion.create_text(x_offset + i * char_width, y_normalizada, anchor="w", 
-                                               text=display_char, font=("Courier", 11), fill=color)
+        self.dibujar_texto_con_cambios(self.texto_siendo_normalizado, 60, -1)  # -1 = no mostrar iterador aún
         
         # Leyenda
-        self.canvas_comparacion.create_text(10, 180, anchor="w", 
-                                           text="Leyenda: ␣ = espacio | Rojo = espacios múltiples | Verde = normalizado", 
+        self.canvas_comparacion.create_text(10, 120, anchor="w", 
+                                           text="Leyenda: ␣ = espacio | Rojo = espacios a eliminar | Azul = mayúsculas a convertir", 
                                            font=("Arial", 9), fill="gray")
+    
+    def dibujar_estado_normalizacion_paso(self, pos_cambiada, cambio):
+        """Dibuja el estado después de realizar un cambio"""
+        self.canvas_comparacion.delete("all")
+        
+        # Título según tipo de cambio
+        if cambio['tipo'] == 'espacio':
+            titulo = f"Paso {self.indice_normalizacion}: Espacio eliminado"
+        else:
+            titulo = f"Paso {self.indice_normalizacion}: Mayúscula convertida"
+        
+        self.canvas_comparacion.create_text(10, 10, anchor="w", 
+                                           text=titulo, 
+                                           font=("Arial", 12, "bold"))
+        
+        # Mostrar texto actual
+        self.canvas_comparacion.create_text(10, 40, anchor="w", 
+                                           text="Texto actual:", font=("Arial", 10, "bold"))
+        
+        # Mostrar donde se realizó el cambio
+        self.dibujar_texto_con_cambios(self.texto_siendo_normalizado, 60, pos_cambiada)
+        
+        # Mostrar progreso
+        restantes = len(self.cambios_encontrados) - self.indice_normalizacion
+        espacios_hechos = sum(1 for i in range(self.indice_normalizacion) 
+                             if self.cambios_encontrados[i]['tipo'] == 'espacio')
+        mayusculas_hechas = sum(1 for i in range(self.indice_normalizacion) 
+                               if self.cambios_encontrados[i]['tipo'] == 'mayuscula')
+        
+        self.canvas_comparacion.create_text(10, 100, anchor="w", 
+                                           text=f"Cambios: {espacios_hechos} espacios + {mayusculas_hechas} mayúsculas | Restantes: {restantes}", 
+                                           font=("Arial", 10), fill="blue")
+    
+    def dibujar_estado_normalizacion_completa(self):
+        """Dibuja el estado final de la normalización"""
+        self.canvas_comparacion.delete("all")
+        
+        # Título
+        self.canvas_comparacion.create_text(10, 10, anchor="w", 
+                                           text="Normalización completada", 
+                                           font=("Arial", 12, "bold"), fill="green")
+        
+        # Comparación antes/después
+        self.canvas_comparacion.create_text(10, 40, anchor="w", 
+                                           text="Original:", font=("Arial", 10, "bold"))
+        self.dibujar_texto_simple(self.frase_original, 60, "black")
+        
+        self.canvas_comparacion.create_text(10, 90, anchor="w", 
+                                           text="Normalizado:", font=("Arial", 10, "bold"))
+        self.dibujar_texto_simple(self.texto_siendo_normalizado, 110, "green")
+        
+        # Estadísticas
+        espacios_eliminados = sum(1 for c in self.cambios_encontrados if c['tipo'] == 'espacio')
+        mayusculas_convertidas = sum(1 for c in self.cambios_encontrados if c['tipo'] == 'mayuscula')
+        
+        self.canvas_comparacion.create_text(10, 150, anchor="w", 
+                                           text=f"✅ {espacios_eliminados} espacios eliminados + {mayusculas_convertidas} mayúsculas convertidas", 
+                                           font=("Arial", 10), fill="green")
+    
+    def dibujar_texto_con_cambios(self, texto, y_pos, pos_iterador):
+        """Dibuja texto mostrando espacios múltiples y mayúsculas a cambiar"""
+        x_offset = 10
+        char_width = 15
+        
+        for i, char in enumerate(texto):
+            # Determinar color según tipo de cambio necesario
+            color = "black"  # Por defecto
+            
+            # Rojo para espacios múltiples
+            if char == ' ' and i < len(texto) - 1 and texto[i + 1] == ' ':
+                color = "red"
+            # Azul para mayúsculas
+            elif char.isupper():
+                color = "blue"
+            
+            display_char = '␣' if char == ' ' else char
+            self.canvas_comparacion.create_text(x_offset + i * char_width, y_pos, anchor="w", 
+                                               text=display_char, font=("Courier", 11), fill=color)
+        
+        # Dibujar iterador si se especificó posición
+        if pos_iterador >= 0:
+            x_pos = x_offset + pos_iterador * char_width
+            
+            if self.tipo_cambio_actual == 'espacio':
+                self.canvas_comparacion.create_text(x_pos, y_pos + 20, anchor="w", 
+                                                   text="↓", font=("Arial", 12), fill="red")
+                self.canvas_comparacion.create_text(x_pos + 10, y_pos + 20, anchor="w", 
+                                                   text="ELIMINADO", font=("Arial", 8), fill="red")
+            else:  # mayuscula
+                self.canvas_comparacion.create_text(x_pos, y_pos + 20, anchor="w", 
+                                                   text="↓", font=("Arial", 12), fill="blue")
+                self.canvas_comparacion.create_text(x_pos + 10, y_pos + 20, anchor="w", 
+                                                   text="CONVERTIDO", font=("Arial", 8), fill="blue")
+    
+    def dibujar_texto_simple(self, texto, y_pos, color):
+        """Dibuja texto simple sin iterador"""
+        x_offset = 10
+        char_width = 15
+        
+        for i, char in enumerate(texto):
+            display_char = '␣' if char == ' ' else char
+            self.canvas_comparacion.create_text(x_offset + i * char_width, y_pos, anchor="w", 
+                                               text=display_char, font=("Courier", 11), fill=color)
     
     def iniciar_comparacion_visual(self):
         """Inicia la comparación visual paso a paso"""
@@ -500,9 +700,14 @@ class FraseInterminableVisual:
         self.indice_comparacion = 0
         self.comparacion_activa = False
         self.normalizacion_activa = False
+        self.indice_normalizacion = 0
+        self.texto_siendo_normalizado = ""
+        self.cambios_encontrados = []
+        self.tipo_cambio_actual = ""
         self.comparaciones_realizadas = []
         self.frase_original = ""
         self.btn_siguiente_char.config(state="disabled")
+        self.btn_siguiente_cambio.config(state="disabled")
         self.btn_iniciar_comparacion.config(state="disabled")
         self.canvas_comparacion.delete("all")
         self.text_validacion.delete(1.0, tk.END)
