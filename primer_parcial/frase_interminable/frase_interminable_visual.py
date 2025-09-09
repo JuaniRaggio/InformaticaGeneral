@@ -189,6 +189,10 @@ class FraseInterminableVisual:
             self.label_turno.config(text=f"Turno actual: {jugador_actual}")
             frase_mostrar = self.frase_anterior if self.frase_anterior else "(vacía)"
             self.label_frase.config(text=f"Frase anterior: {frase_mostrar}")
+        else:
+            self.label_frases.config(text="Frases dichas: 0")
+            self.label_turno.config(text="Turno actual: (No iniciado)")
+            self.label_frase.config(text="Frase anterior: (vacía)")
     
     def iniciar_normalizacion(self):
         """Inicia el proceso de normalización paso a paso"""
@@ -507,18 +511,18 @@ class FraseInterminableVisual:
         self.canvas_comparacion.delete("all")
         
         # Título
-        self.canvas_comparacion.create_text(10, 10, anchor="w", 
+        self.canvas_comparacion.create_text(10, 15, anchor="w", 
                                            text="Comparación caracter por caracter:", 
                                            font=("Arial", 12, "bold"))
         
         # Dibujar las frases
-        y_frase_ant = 40
-        y_frase_nueva = 80
+        y_frase_ant = 65
+        y_frase_nueva = 105
         
-        self.canvas_comparacion.create_text(10, y_frase_ant - 20, anchor="w", 
+        self.canvas_comparacion.create_text(10, y_frase_ant - 15, anchor="w", 
                                            text="Frase anterior:", font=("Arial", 10, "bold"))
         
-        self.canvas_comparacion.create_text(10, y_frase_nueva - 20, anchor="w", 
+        self.canvas_comparacion.create_text(10, y_frase_nueva - 15, anchor="w", 
                                            text="Nueva frase:", font=("Arial", 10, "bold"))
         
         # Dibujar caracteres de ambas frases
@@ -546,11 +550,11 @@ class FraseInterminableVisual:
         self.dibujar_iteradores()
         
         # Leyenda
-        self.canvas_comparacion.create_text(10, 150, anchor="w", 
+        self.canvas_comparacion.create_text(10, 175, anchor="w", 
                                            text="Azul: frase anterior | Rojo: parte a verificar | Verde: nueva parte", 
                                            font=("Arial", 9), fill="black")
         
-        self.canvas_comparacion.create_text(10, 170, anchor="w", 
+        self.canvas_comparacion.create_text(10, 195, anchor="w", 
                                            text="↑ Iterador frase anterior | ↓ Iterador nueva frase", 
                                            font=("Arial", 9), fill="black")
     
@@ -561,23 +565,23 @@ class FraseInterminableVisual:
         
         x_offset = 10
         char_width = 15
-        y_frase_ant = 40
-        y_frase_nueva = 80
+        y_frase_ant = 65
+        y_frase_nueva = 105
         
         # Iterador de frase anterior (flecha hacia arriba)
         if self.indice_comparacion < len(self.frase_a_comparar):
             x_pos = x_offset + self.indice_comparacion * char_width
-            self.canvas_comparacion.create_text(x_pos, y_frase_ant - 35, anchor="w", 
+            self.canvas_comparacion.create_text(x_pos, y_frase_ant - 25, anchor="w", 
                                                text="↑", font=("Arial", 12), fill="blue", tags="iterador_ant")
-            self.canvas_comparacion.create_text(x_pos + 10, y_frase_ant - 35, anchor="w", 
+            self.canvas_comparacion.create_text(x_pos + 10, y_frase_ant - 25, anchor="w", 
                                                text=f"i={self.indice_comparacion}", 
                                                font=("Arial", 8), fill="blue", tags="iterador_ant")
         else:
             # Mostrar que el iterador se detuvo
             x_pos = x_offset + (len(self.frase_a_comparar) - 1) * char_width if len(self.frase_a_comparar) > 0 else x_offset
-            self.canvas_comparacion.create_text(x_pos, y_frase_ant - 35, anchor="w", 
+            self.canvas_comparacion.create_text(x_pos, y_frase_ant - 25, anchor="w", 
                                                text="⊗", font=("Arial", 12), fill="red", tags="iterador_ant")
-            self.canvas_comparacion.create_text(x_pos + 10, y_frase_ant - 35, anchor="w", 
+            self.canvas_comparacion.create_text(x_pos + 10, y_frase_ant - 25, anchor="w", 
                                                text="FIN", font=("Arial", 8), fill="red", tags="iterador_ant")
         
         # Iterador de nueva frase (flecha hacia abajo)
@@ -662,6 +666,11 @@ class FraseInterminableVisual:
     
     def mostrar_jugador_perdedor(self):
         """Calcula y muestra qué jugador perdió basado en las frases dichas"""
+        # Verificar que el juego esté iniciado
+        if self.num_jugadores == 0:
+            messagebox.showerror("Error", "Debe iniciar el juego primero")
+            return
+            
         # El jugador que perdió es quien debía decir la frase actual
         jugador_perdedor_num = (self.frases_dichas % self.num_jugadores) + 1
         jugador_perdedor = f"Jugador {jugador_perdedor_num}"
@@ -740,6 +749,11 @@ class FraseInterminableVisual:
     
     def pedir_siguiente_frase(self):
         """Prepara el juego para el siguiente jugador"""
+        # Verificar que el juego esté iniciado
+        if self.num_jugadores == 0:
+            messagebox.showerror("Error", "Debe iniciar el juego primero")
+            return
+            
         self.text_validacion.insert(tk.END, "\n" + "="*60 + "\n")
         self.text_validacion.insert(tk.END, "           🔄 PREPARANDO SIGUIENTE TURNO\n")
         self.text_validacion.insert(tk.END, "="*60 + "\n\n")
