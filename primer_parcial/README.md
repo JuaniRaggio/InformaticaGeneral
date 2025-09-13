@@ -4,7 +4,7 @@ Manejar condicionales es muy importante para la mayoria de los apartados. Tanto 
 
 - Uso de *while + i* para recorrer strings y verificar caracter por caracter cierta/s condicion/es
 
-- Pasaje $"strings" \rightarrow "numero (int() o float())"$. *TENER EN CUENTA QUE TODO LO QUE INGRESAN POR CONSOLA ES STRING*
+- Pasaje $\text{"strings"} \rightarrow \text{"numero (int() o float())"}$. *TENER EN CUENTA QUE TODO LO QUE INGRESAN POR CONSOLA ES STRING*
 
 
 # Validacion de datos
