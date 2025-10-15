@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización Bubble Sort</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .canvas-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            min-height: 400px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        canvas {
+            border-radius: 5px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .control-group .value-display {
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .code-reference {
+            background: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: #f8f9fa;
+        }
+
+        .code-reference h3 {
+            color: #f39c12;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .code-reference pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+        }
+
+        .code-reference code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-comment {
+            color: #6a9955;
+        }
+
+        .code-keyword {
+            color: #569cd6;
+        }
+
+        .code-function {
+            color: #dcdcaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Visualización ordenamiento ascendente</h1>
+        <p class="subtitle">Algoritmo de ordenamiento con dos loops anidados (de atrás para adelante)</p>
+
+        <div class="code-reference">
+            <h3>Código Python</h3>
+            <pre><code><span class="code-keyword">def</span> <span class="code-function">ordenamiento_asc</span>(lista):
+    longitud_lista = <span class="code-function">len</span>(lista)
+    <span class="code-keyword">for</span> i <span class="code-keyword">in</span> <span class="code-function">range</span>(longitud_lista):
+        <span class="code-comment"># El "-i" esta porque como estamos ordenando los ultimos elementos primero</span>
+        <span class="code-comment"># entonces cuanto mas crece i, menos elementos tenemos que chequear</span>
+        <span class="code-comment"># El "-1" esta porque estamos comparando con el siguiente (Ver visualizacion)</span>
+        <span class="code-comment"># pensar que si llegamos al ultimo literal y queremos comparar con el siguiente,</span>
+        <span class="code-comment"># nos vamos a exceder del limite</span>
+        <span class="code-keyword">for</span> j <span class="code-keyword">in</span> <span class="code-function">range</span>(longitud_lista - i - 1):
+            <span class="code-keyword">if</span> lista[j] > lista[j + 1]:
+                <span class="code-comment"># Si el actual, es mayor al siguiente, swapeamos</span>
+                aux = lista[j]
+                lista[j] = lista[j + 1]
+                lista[j + 1] = aux
+    <span class="code-keyword">return</span> lista</code></pre>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="arraySize">Tamaño del Array</label>
+                <input type="range" id="arraySize" min="3" max="100" value="15">
+                <div class="value-display" id="arraySizeValue">15</div>
+            </div>
+
+            <div class="control-group">
+                <label for="speed">Velocidad de Animación</label>
+                <input type="range" id="speed" min="1" max="200" value="50">
+                <div class="value-display" id="speedValue">50</div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button id="randomizeBtn">Generar Array Aleatorio</button>
+            <button id="sortBtn">Iniciar Ordenamiento</button>
+            <button id="pauseBtn" disabled>Pausar</button>
+            <button id="resumeBtn" disabled>Reanudar</button>
+            <button id="resetBtn">Reiniciar</button>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">Comparaciones:</span>
+                <span class="info-value" id="comparisons">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Intercambios:</span>
+                <span class="info-value" id="swaps">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Estado:</span>
+                <span class="info-value" id="status">Listo</span>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #667eea;"></div>
+                    <span>Sin ordenar</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Comparando</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Intercambiando</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #27ae60;"></div>
+                    <span>Ordenado</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Variables globales
+        let array = [];
+        let arraySize = 15;
+        let speed = 50;
+        let comparisons = 0;
+        let swaps = 0;
+        let isSorting = false;
+        let isPaused = false;
+        let animationId = null;
+
+        // Configurar canvas
+        function setupCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 40;
+            canvas.height = 350;
+        }
+
+        // Generar array aleatorio
+        function generateRandomArray() {
+            array = [];
+            for (let i = 0; i < arraySize; i++) {
+                array.push({
+                    value: Math.floor(Math.random() * 300) + 10,
+                    state: 'unsorted'
+                });
+            }
+            comparisons = 0;
+            swaps = 0;
+            updateInfo();
+            drawArray();
+        }
+
+        // Dibujar array
+        function drawArray(highlightIndices = {}) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width - (arraySize + 1) * 2) / arraySize;
+            const maxHeight = canvas.height - 40;
+
+            for (let i = 0; i < array.length; i++) {
+                const barHeight = (array[i].value / 310) * maxHeight;
+                const x = i * (barWidth + 2) + 2;
+                const y = canvas.height - barHeight - 20;
+
+                // Determinar color según estado
+                let color = '#667eea'; // Azul por defecto
+
+                if (highlightIndices.comparing && highlightIndices.comparing.includes(i)) {
+                    color = '#f39c12'; // Naranja para comparación
+                } else if (highlightIndices.swapping && highlightIndices.swapping.includes(i)) {
+                    color = '#e74c3c'; // Rojo para intercambio
+                } else if (array[i].state === 'sorted') {
+                    color = '#27ae60'; // Verde para ordenado
+                }
+
+                // Dibujar barra
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, barWidth, barHeight);
+
+                // Dibujar valor
+                if (arraySize <= 50) {
+                    ctx.fillStyle = '#333';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(array[i].value, x + barWidth / 2, canvas.height - 5);
+                }
+            }
+        }
+
+        // Actualizar información
+        function updateInfo() {
+            document.getElementById('comparisons').textContent = comparisons;
+            document.getElementById('swaps').textContent = swaps;
+        }
+
+        // Sleep para animación
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Algoritmo Bubble Sort (de atrás para adelante)
+        async function bubbleSort() {
+            isSorting = true;
+            isPaused = false;
+            updateButtons();
+            document.getElementById('status').textContent = 'Ordenando...';
+
+            const n = array.length;
+
+            // Loop externo: va de atrás para adelante
+            for (let i = n - 1; i > 0; i--) {
+                // Loop interno: compara elementos adyacentes
+                for (let j = 0; j < i; j++) {
+                    if (!isSorting) return;
+
+                    // Esperar si está pausado
+                    while (isPaused) {
+                        await sleep(100);
+                    }
+
+                    comparisons++;
+                    updateInfo();
+
+                    // Mostrar comparación
+                    drawArray({ comparing: [j, j + 1] });
+                    await sleep(201 - speed);
+
+                    // Comparar y swapear si es necesario
+                    if (array[j].value > array[j + 1].value) {
+                        // Mostrar intercambio
+                        drawArray({ swapping: [j, j + 1] });
+                        await sleep(201 - speed);
+
+                        // Realizar swap
+                        [array[j], array[j + 1]] = [array[j + 1], array[j]];
+                        swaps++;
+                        updateInfo();
+
+                        drawArray();
+                        await sleep(201 - speed);
+                    }
+                }
+
+                // Marcar el elemento en la posición i como ordenado
+                array[i].state = 'sorted';
+                drawArray();
+            }
+
+            // Marcar el primer elemento como ordenado
+            array[0].state = 'sorted';
+            drawArray();
+
+            isSorting = false;
+            document.getElementById('status').textContent = 'Completado';
+            updateButtons();
+        }
+
+        // Actualizar botones según estado
+        function updateButtons() {
+            document.getElementById('sortBtn').disabled = isSorting;
+            document.getElementById('pauseBtn').disabled = !isSorting || isPaused;
+            document.getElementById('resumeBtn').disabled = !isPaused;
+            document.getElementById('randomizeBtn').disabled = isSorting;
+            document.getElementById('arraySize').disabled = isSorting;
+        }
+
+        // Event Listeners
+        document.getElementById('arraySize').addEventListener('input', (e) => {
+            arraySize = parseInt(e.target.value);
+            document.getElementById('arraySizeValue').textContent = arraySize;
+            if (!isSorting) {
+                generateRandomArray();
+            }
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = speed;
+        });
+
+        document.getElementById('randomizeBtn').addEventListener('click', () => {
+            generateRandomArray();
+            document.getElementById('status').textContent = 'Listo';
+        });
+
+        document.getElementById('sortBtn').addEventListener('click', () => {
+            bubbleSort();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isPaused = true;
+            document.getElementById('status').textContent = 'Pausado';
+            updateButtons();
+        });
+
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            isPaused = false;
+            document.getElementById('status').textContent = 'Ordenando...';
+            updateButtons();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            isSorting = false;
+            isPaused = false;
+            generateRandomArray();
+            document.getElementById('status').textContent = 'Listo';
+            updateButtons();
+        });
+
+        // Inicializar
+        window.addEventListener('load', () => {
+            setupCanvas();
+            generateRandomArray();
+        });
+
+        window.addEventListener('resize', () => {
+            setupCanvas();
+            drawArray();
+        });
+    </script>
+</body>
+</html>
