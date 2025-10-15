@@ -227,7 +227,7 @@
         <span class="code-comment"># entonces cuanto mas crece i, menos elementos tenemos que chequear</span>
         <span class="code-comment"># El "-1" esta porque estamos comparando con el siguiente (Ver visualizacion)</span>
         <span class="code-comment"># pensar que si llegamos al ultimo literal y queremos comparar con el siguiente,</span>
-        <span class="code-comment"># nos vamos a exceder del limite</span>
+        <span class="code-comment"># nos vamos a exceder del limite, por eso le restamos 1</span>
         <span class="code-keyword">for</span> j <span class="code-keyword">in</span> <span class="code-function">range</span>(longitud_lista - i - 1):
             <span class="code-keyword">if</span> lista[j] > lista[j + 1]:
                 <span class="code-comment"># Si el actual, es mayor al siguiente, swapeamos</span>
