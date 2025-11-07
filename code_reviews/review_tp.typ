@@ -1,5 +1,5 @@
 #set document(
-  title: "Correccion TP info general",
+  title: "Review TP info general",
   author: "Juan Ignacio Raggio",
 )
 
@@ -161,6 +161,7 @@
 #importante[
   1. Si bien las funciones implementadas cumplen con los requisitos del enunciado, el codigo tiene problemas de mantenibilidad y estructura
   2. No voy a mencionar todas las veces que se repite cada error, la idea es que se entiendan los conceptos y los apliques en todos lados
+  3. Quiero que le des enfasis a entender los conceptos para aplicarlos en otros contextos mas que las correcciones especificas
 ]
 
 = Problemas importantes
@@ -233,7 +234,7 @@ def leer_vuelos(ruta_a_archivo): # IMPORTANTE el parametro y no hardcodearlo
         return horarios_prog, codigos, aerolineas, destinos, horarios_part, terminales, estados
     except FileNotFoundError:
         print(f"File not found: {ruta_a_archivo}")
-        return []
+        return [] # preferible retornar lista vacia que none
 ```
 ]
 
@@ -274,7 +275,7 @@ def leer_vuelos(ruta_a_archivo): # IMPORTANTE el parametro y no hardcodearlo
 
     arg1 = 3
     arg2 = 4
-    # como el usuario QUERIA MODIFICAR arg1, que lo haga el, no corresponde
+    # Si el usuario quiere modificar arg1, que lo haga el, no corresponde
     # que desde la funcion hagas acceso a variables globales
     arg1 = funcion_retornadora(arg1, arg2)
     ```
@@ -364,6 +365,20 @@ if not cant_viajeros[i]:
   Mejor aun, recorrer los datos en grupos de 3 (Total, Residentes, No residentes).
 ]
 
+== Calculo de Puntualidad
+
+La lista `horarios_part` se carga al principio desde el CSV pero luego no se usa, lo que indica un error conceptual. La puntualidad debe verificarse comparando el horario programado con el horario de partida real.
+No termine de entender lo que hiciste pero te dejo el razonamiento general del problema
+
+#tip[
+  La lógica correcta sería:
+  1. Recorrer todos los vuelos.
+  2. Verificar si el estado del vuelo es "Despegado".
+  3. Si despegó, comparar `horarios_prog[i]` con `horarios_part[i]`. Si son iguales, el vuelo fue puntual.
+
+  No es necesario (y es incorrecto) extraer la hora del string de estado.
+]
+
 = Problemas de Estructura y Diseño
 
 == Mezcla de Logica con inputs de usuario
@@ -379,10 +394,10 @@ def mas_visitadas():
     year = (input("Ingrese un year: ")) # No va el input dentro de la funcion de procesamiento
     # ... mas logica ...
     while year not in years:
-        year = input("Reingrese: ")  # Mal: input en loop
+        year = input("Reingrese: ")
 ```
 
-#tip[
+#importante[
   Separar la logica de la interfaz:
 
   ```python
@@ -426,13 +441,45 @@ def mas_visitadas():
 
 #tip[
   Para ordenar todo esto, podes implementar esta "mecanizacion":
-  1. Hacer funcion de procesamiento de datos *recibiendo todo lo necesario por parametros* (obviamente creas variables locales si es necesario)
-  2. Hacer funcion de presentacion que va a llamar a la funcion de procesamiento de datos
+  1. Hacer la funcion de procesamiento de datos *recibiendo todo lo necesario por parametros* (obviamente creas variables locales si es necesario)
+  2. Hacer la *funcion de presentacion* que va a *llamar* a la *funcion de procesamiento de datos*
 
   Entonces la funcion que te pidieron que *recibe input por teclaro* es la de presentacion que internamente llama a la de procesamiento.
-  Mas tecnicamente el Front-end es la funcion de recibir input y el Back-end la funcion de procesamiento de datos
+
+  Mas tecnicamente el Frontend es la funcion de recibir input y el Backend la funcion de procesamiento de datos
 ]
 
+#pagebreak()
+
+= Legibilidad y Estilo
+
+== Nombres de Variables Poco Descriptivos
+
+#importante[
+  En algunas funciones, como `puntuales_x_aero`, se usan nombres de variables muy cortos y poco descriptivos (ej. `horarios_part_num_e`, `horarios_part_num_f`, `ids`, `ids_f`). Esto hace que el codigo sea dificil de seguir. Intenta usar nombres que describan claramente que guarda la variable.
+
+  Por ejemplo, en vez de `ids_f`, podrías usar `indices_vuelos_aerolinea`. Es mas largo, pero mucho mas claro.
+]
+
+== Magic numbers
+
+#error[
+  En `ids_despegados`, usas `65 <= ord(letra) <= 90`. Estos números se conocen como magic numbers y son una mala practica porque no se entiende a simple vista que representan.
+
+  ```python
+  if 65 <= ord(letra) <= 90 or 97 <= ord(letra) <= 122:
+      estado_solo_letras += letra
+
+  ```
+]
+
+#tip[
+Te conviene hacer esto:
+```py
+  if 'A' <= letra <= 'Z' or 'a' <= letra <= 'z':
+  estado_solo_letras += letra
+```
+]
 #pagebreak()
 
 = Aspectos Positivos
@@ -456,7 +503,9 @@ A pesar de los problemas mencionados, hay varios aspectos positivos en el codigo
 
 4. *Cumplir con lo pedido en el enunciado*: Este punto es fundamental, si te dicen que una funcion recibe `dato_X` y retorna `tipo_T`, asegurate de cumplirlo. Acordarse que *print retorna None siempre*
 
+5. *Cualquier duda que tengas escribime*
+
 #importante[
-  El trabajo demuestra comprension de los conceptos basicos, pero necesita mejorar significativamente en terminos de calidad de codigo profesional. Se recomienda refactorizar considerando las sugerencias mencionadas.
+  El trabajo demuestra comprension de los conceptos basicos, adaptar las sugerencias dadas va hacer que el codigo sea mas legible y por ende mas facil de seguir. Esto es una ventaja no solo para el dia de mañana que alguien tenga que leer tu codigo sino que para que vos mismo cuando tengas que leerlo (incluso el dia del examen), se te haga mas facil de corregir
 ]
 
