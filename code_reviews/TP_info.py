@@ -109,7 +109,8 @@ def vuelos_despegados_puntual():
             print(f"-{elem}: {vp_x_aero} vuelos")
             vuelos_puntuales = True
             cant_vuelos_puntuales += vp_x_aero
-    if not vuelos_puntuales: print("Todos los vuelos han partido con demora")
+    if not vuelos_puntuales:
+        print("Todos los vuelos han partido con demora")
 
     cant_despegados = len(ids_despegados())
     if cant_despegados == 0:
